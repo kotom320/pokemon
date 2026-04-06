@@ -1,27 +1,48 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { Suspense, useEffect, useRef } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
+import { useRouter, useSearchParams } from "next/navigation";
 import PokemonCard from "@/components/PokemonCard";
+import GenerationFilter from "@/components/GenerationFilter";
 import type { PokemonListItem } from "@/lib/types";
 
 const PAGE_SIZE = 20;
 
-async function fetchPokemonPage(offset: number): Promise<{ items: PokemonListItem[]; total: number }> {
-  const res = await fetch(`/api/pokemon?limit=${PAGE_SIZE}&offset=${offset}`);
+async function fetchPokemonPage(
+  offset: number,
+  generation: number | null,
+): Promise<{ items: PokemonListItem[]; total: number }> {
+  const params = new URLSearchParams({ limit: String(PAGE_SIZE), offset: String(offset) });
+  if (generation) params.set("generation", String(generation));
+  const res = await fetch(`/api/pokemon?${params}`);
   if (!res.ok) throw new Error("포켓몬 목록을 불러오지 못했습니다.");
   return res.json();
 }
 
-export default function Home() {
+function PokemonList() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const generation = searchParams.get("generation") ? Number(searchParams.get("generation")) : null;
+
+  function handleGenerationChange(gen: number | null) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (gen) {
+      params.set("generation", String(gen));
+    } else {
+      params.delete("generation");
+    }
+    router.replace(`/?${params}`, { scroll: false });
+  }
+
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, status, isError } =
     useInfiniteQuery({
-      queryKey: ["pokemon-list"],
-      queryFn: ({ pageParam }) => fetchPokemonPage(pageParam),
+      queryKey: ["pokemon-list", generation],
+      queryFn: ({ pageParam }) => fetchPokemonPage(pageParam, generation),
       initialPageParam: 0,
       getNextPageParam: (lastPage, allPages) => {
         if (lastPage.items.length === 0) return undefined;
-        const loaded = allPages.length * PAGE_SIZE;
+        const loaded = allPages.reduce((sum, p) => sum + p.items.length, 0);
         return loaded < lastPage.total ? loaded : undefined;
       },
       retry: 1,
@@ -29,7 +50,6 @@ export default function Home() {
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
-  // 무한 스크롤
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -47,13 +67,17 @@ export default function Home() {
   const total = data?.pages[0]?.total ?? null;
 
   return (
-    <main className="max-w-5xl mx-auto px-4 py-8">
-      <header className="mb-8 text-center">
+    <>
+      <header className="mb-6 text-center">
         <h1 className="text-3xl font-bold text-gray-900">포켓몬 도감</h1>
         {total !== null && (
           <p className="text-sm text-gray-500 mt-1">총 {total}마리</p>
         )}
       </header>
+
+      <div className="-mx-4 px-4 mb-4 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
+        <GenerationFilter selected={generation} onChange={handleGenerationChange} />
+      </div>
 
       {status === "error" && (
         <p className="text-center text-red-500">데이터를 불러오지 못했습니다.</p>
@@ -72,6 +96,16 @@ export default function Home() {
       )}
 
       <div ref={sentinelRef} className="h-4" />
+    </>
+  );
+}
+
+export default function Home() {
+  return (
+    <main className="max-w-5xl mx-auto px-4 py-8">
+      <Suspense>
+        <PokemonList />
+      </Suspense>
     </main>
   );
 }

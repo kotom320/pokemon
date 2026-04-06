@@ -5,7 +5,12 @@ export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
   const limit = Number(searchParams.get("limit") ?? 20);
   const offset = Number(searchParams.get("offset") ?? 0);
+  const generation = searchParams.get("generation");
 
-  const data = await getPokemonList(limit, offset);
+  const data = await getPokemonList(
+    limit,
+    offset,
+    generation ? Number(generation) : undefined,
+  );
   return NextResponse.json(data);
 }

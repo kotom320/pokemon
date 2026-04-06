@@ -12,6 +12,18 @@ import type {
 
 const BASE_URL = "https://pokeapi.co/api/v2";
 
+export const GENERATION_RANGES: Record<number, { start: number; end: number }> = {
+  1: { start: 1,   end: 151  },
+  2: { start: 152, end: 251  },
+  3: { start: 252, end: 386  },
+  4: { start: 387, end: 493  },
+  5: { start: 494, end: 649  },
+  6: { start: 650, end: 721  },
+  7: { start: 722, end: 809  },
+  8: { start: 810, end: 905  },
+  9: { start: 906, end: 1025 },
+};
+
 // 타입명 한국어 캐시
 const typeNameCache = new Map<string, string>();
 
@@ -29,26 +41,35 @@ async function getKoreanTypeName(typeName: string): Promise<string> {
 
 export async function getPokemonList(
   limit: number = 20,
-  offset: number = 0
+  offset: number = 0,
+  generation?: number,
 ): Promise<{ items: PokemonListItem[]; total: number }> {
-  const listRes = await fetch(
-    `${BASE_URL}/pokemon-species?limit=${limit}&offset=${offset}`,
-    { next: { revalidate: 3600 } }
-  );
-  const list: PokeAPIListResponse = await listRes.json();
+  let ids: number[];
+  let total: number;
 
-  const results = await Promise.allSettled(
-    list.results.map(async (entry) => {
-      const id = extractIdFromUrl(entry.url);
-      return getPokemonListItem(id);
-    })
-  );
+  if (generation) {
+    const { start, end } = GENERATION_RANGES[generation];
+    total = end - start + 1;
+    ids = Array.from(
+      { length: Math.min(limit, total - offset) },
+      (_, i) => start + offset + i
+    );
+  } else {
+    const listRes = await fetch(
+      `${BASE_URL}/pokemon-species?limit=${limit}&offset=${offset}`,
+      { next: { revalidate: 3600 } }
+    );
+    const list: PokeAPIListResponse = await listRes.json();
+    total = list.count;
+    ids = list.results.map((e) => extractIdFromUrl(e.url));
+  }
 
+  const results = await Promise.allSettled(ids.map((id) => getPokemonListItem(id)));
   const items = results
     .filter((r): r is PromiseFulfilledResult<PokemonListItem> => r.status === "fulfilled")
     .map((r) => r.value);
 
-  return { items, total: list.count };
+  return { items, total };
 }
 
 export async function getPokemonListItem(id: number): Promise<PokemonListItem> {
