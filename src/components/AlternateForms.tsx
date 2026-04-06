@@ -1,12 +1,13 @@
-"use client";
-
 import Image from "next/image";
-import { useRouter } from "next/navigation";
 import type { AlternateForm } from "@/lib/types";
 
-export default function AlternateForms({ forms }: { forms: AlternateForm[] }) {
-  const router = useRouter();
+interface Props {
+  forms: AlternateForm[];
+  currentId: number;
+  onSelect: (id: number) => void;
+}
 
+export default function AlternateForms({ forms, currentId, onSelect }: Props) {
   return (
     <div className="mb-6">
       <h2 className="font-semibold text-gray-700 mb-3">다른 폼</h2>
@@ -14,8 +15,9 @@ export default function AlternateForms({ forms }: { forms: AlternateForm[] }) {
         {forms.map((form) => (
           <button
             key={form.slug}
-            onClick={() => router.replace(`/pokemon/${form.id}`)}
-            className="bg-gray-50 rounded-xl p-3 flex flex-col items-center gap-1 active:scale-95 active:bg-gray-100 transition-transform duration-100 select-none touch-manipulation w-full"
+            onClick={() => onSelect(form.id)}
+            disabled={form.id === currentId}
+            className="bg-gray-50 rounded-xl p-3 flex flex-col items-center gap-1 active:scale-95 active:bg-gray-100 transition-transform duration-100 select-none touch-manipulation w-full disabled:opacity-50 disabled:cursor-default disabled:active:scale-100"
           >
             <div className="relative w-20 h-20">
               <Image

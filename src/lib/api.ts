@@ -73,10 +73,8 @@ export async function getPokemonListItem(id: number): Promise<PokemonListItem> {
 }
 
 export async function getPokemonDetail(id: number): Promise<PokemonDetail> {
-  const [pokemon, species] = await Promise.all([
-    fetchPokemon(id),
-    fetchSpecies(id),
-  ]);
+  const pokemon = await fetchPokemon(id);
+  const species = await fetchSpecies(pokemon.species.url);
 
   const baseKoreanName =
     species.names.find((n) => n.language.name === "ko")?.name ?? pokemon.name;
@@ -84,9 +82,16 @@ export async function getPokemonDetail(id: number): Promise<PokemonDetail> {
   const defaultVariety = species.varieties.find((v) => v.is_default);
   const isDefault = defaultVariety?.pokemon.name === pokemon.name;
   const displayId = isDefault ? id : extractIdFromUrl(defaultVariety?.pokemon.url ?? String(id));
-  const koreanName = isDefault
-    ? baseKoreanName
-    : getKoreanFormName(pokemon.name, baseKoreanName);
+
+  let koreanName = baseKoreanName;
+  if (!isDefault) {
+    const formRes = await fetch(`${BASE_URL}/pokemon-form/${pokemon.name}`, {
+      next: { revalidate: 86400 },
+    });
+    const formData: { form_names: { language: { name: string }; name: string }[] } = await formRes.json();
+    const koreanFormName = formData.form_names.find((n) => n.language.name === "ko")?.name;
+    koreanName = koreanFormName || getKoreanFormName(pokemon.name, baseKoreanName);
+  }
 
   const types = await Promise.all(
     pokemon.types.map((t) => getKoreanTypeName(t.type.name))
@@ -196,24 +201,26 @@ async function getAlternateForms(
   baseKoreanName: string,
   currentId: number,
 ): Promise<AlternateForm[]> {
-  // 기본 폼 + 메가/거대이맥스/지역 폼만 포함
-  const relevant = species.varieties.filter(
-    (v) => v.is_default || isRelevantForm(v.pokemon.name)
-  );
-  if (relevant.length <= 1) return [];
+  if (species.varieties.length <= 1) return [];
 
   const results = await Promise.allSettled(
-    relevant.map(async (v) => {
-      const res = await fetch(`${BASE_URL}/pokemon/${v.pokemon.name}`, {
-        next: { revalidate: 86400 },
-      });
-      const pokemon: PokeAPIPokemon = await res.json();
+    species.varieties.map(async (v) => {
+      const [pokemonRes, formRes] = await Promise.all([
+        fetch(`${BASE_URL}/pokemon/${v.pokemon.name}`, { next: { revalidate: 86400 } }),
+        fetch(`${BASE_URL}/pokemon-form/${v.pokemon.name}`, { next: { revalidate: 86400 } }),
+      ]);
+      const pokemon: PokeAPIPokemon = await pokemonRes.json();
+      const form: { form_names: { language: { name: string }; name: string }[] } = await formRes.json();
+
+      const koreanFormName = form.form_names.find((n) => n.language.name === "ko")?.name;
+      const koreanName = v.is_default
+        ? baseKoreanName
+        : (koreanFormName || getKoreanFormName(v.pokemon.name, baseKoreanName));
+
       return {
         id: pokemon.id,
         slug: v.pokemon.name,
-        koreanName: v.is_default
-          ? baseKoreanName
-          : getKoreanFormName(v.pokemon.name, baseKoreanName),
+        koreanName,
         imageUrl: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemon.id}.png`,
       };
     })
@@ -222,7 +229,7 @@ async function getAlternateForms(
   return results
     .filter((r): r is PromiseFulfilledResult<AlternateForm> => r.status === "fulfilled")
     .map((r) => r.value)
-    .filter((form) => form.id !== currentId); // 현재 폼 제외
+    .filter((form) => form.id !== currentId);
 }
 
 export async function getAllPokemonForPrint(): Promise<PrintEntry[]> {
