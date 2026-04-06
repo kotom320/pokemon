@@ -199,7 +199,8 @@ function isExcludedForm(slug: string): boolean {
     slug.endsWith("-belle") ||
     slug.endsWith("-pop-star") ||
     slug.endsWith("-phd") ||
-    slug.endsWith("-libre")
+    slug.endsWith("-libre") ||
+    slug.endsWith("-totem")         // 토템 포켓몬 (알로라 보스 전용 초대형 버전)
   );
 }
 
