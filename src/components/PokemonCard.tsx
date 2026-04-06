@@ -25,10 +25,10 @@ const TYPE_COLORS: Record<string, string> = {
 
 export default function PokemonCard({ pokemon }: { pokemon: PokemonListItem }) {
   return (
-    <Link href={`/pokemon/${pokemon.id}`}>
-      <div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow cursor-pointer p-4 flex flex-col items-center gap-2">
-        <span className="text-xs text-gray-400 self-start">
-          #{String(pokemon.id).padStart(3, "0")}
+    <Link href={`/pokemon/${pokemon.id}`} className="touch-manipulation">
+      <div className="bg-white rounded-2xl shadow-sm active:scale-95 active:shadow-none transition-transform duration-100 p-4 flex flex-col items-center gap-2 select-none">
+        <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full self-start font-mono">
+          {String(pokemon.id).padStart(3, "0")}
         </span>
         <div className="relative w-24 h-24">
           <Image

@@ -1,46 +1,50 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef } from "react";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import PokemonCard from "@/components/PokemonCard";
 import type { PokemonListItem } from "@/lib/types";
 
 const PAGE_SIZE = 20;
 
+async function fetchPokemonPage(offset: number): Promise<{ items: PokemonListItem[]; total: number }> {
+  const res = await fetch(`/api/pokemon?limit=${PAGE_SIZE}&offset=${offset}`);
+  if (!res.ok) throw new Error("포켓몬 목록을 불러오지 못했습니다.");
+  return res.json();
+}
+
 export default function Home() {
-  const [pokemonList, setPokemonList] = useState<PokemonListItem[]>([]);
-  const [offset, setOffset] = useState(0);
-  const [total, setTotal] = useState<number | null>(null);
-  const [loading, setLoading] = useState(false);
-  const observerRef = useRef<IntersectionObserver | null>(null);
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, status, isError } =
+    useInfiniteQuery({
+      queryKey: ["pokemon-list"],
+      queryFn: ({ pageParam }) => fetchPokemonPage(pageParam),
+      initialPageParam: 0,
+      getNextPageParam: (lastPage, allPages) => {
+        if (lastPage.items.length === 0) return undefined;
+        const loaded = allPages.length * PAGE_SIZE;
+        return loaded < lastPage.total ? loaded : undefined;
+      },
+      retry: 1,
+    });
+
   const sentinelRef = useRef<HTMLDivElement | null>(null);
-
-  const loadMore = useCallback(async () => {
-    if (loading) return;
-    if (total !== null && offset >= total) return;
-
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/pokemon?limit=${PAGE_SIZE}&offset=${offset}`);
-      const data: { items: PokemonListItem[]; total: number } = await res.json();
-      setPokemonList((prev) => [...prev, ...data.items]);
-      setTotal(data.total);
-      setOffset((prev) => prev + PAGE_SIZE);
-    } finally {
-      setLoading(false);
-    }
-  }, [loading, offset, total]);
 
   // 무한 스크롤
   useEffect(() => {
-    observerRef.current = new IntersectionObserver(
+    const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting) loadMore();
+        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage && !isError) {
+          fetchNextPage();
+        }
       },
       { rootMargin: "200px" }
     );
-    if (sentinelRef.current) observerRef.current.observe(sentinelRef.current);
-    return () => observerRef.current?.disconnect();
-  }, [loadMore]);
+    if (sentinelRef.current) observer.observe(sentinelRef.current);
+    return () => observer.disconnect();
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage, isError]);
+
+  const pokemonList = data?.pages.flatMap((page) => page.items) ?? [];
+  const total = data?.pages[0]?.total ?? null;
 
   return (
     <main className="max-w-5xl mx-auto px-4 py-8">
@@ -51,13 +55,17 @@ export default function Home() {
         )}
       </header>
 
+      {status === "error" && (
+        <p className="text-center text-red-500">데이터를 불러오지 못했습니다.</p>
+      )}
+
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
         {pokemonList.map((pokemon) => (
           <PokemonCard key={pokemon.id} pokemon={pokemon} />
         ))}
       </div>
 
-      {loading && (
+      {isFetchingNextPage && (
         <div className="flex justify-center mt-8">
           <div className="w-8 h-8 border-4 border-red-400 border-t-transparent rounded-full animate-spin" />
         </div>

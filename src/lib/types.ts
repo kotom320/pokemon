@@ -7,11 +7,20 @@ export interface PokemonListItem {
 }
 
 export interface PokemonDetail extends PokemonListItem {
+  displayId: number;    // 도감 번호 (폼의 경우 기본 포켓몬 번호)
   height: number;       // 단위: 데시미터
   weight: number;       // 단위: 헥토그램
   stats: { name: string; value: number }[];
   description: string;  // 한국어 도감 설명
   evolutionChain?: EvolutionStage[];
+  alternateForms: AlternateForm[];
+}
+
+export interface AlternateForm {
+  id: number;
+  slug: string;
+  koreanName: string;
+  imageUrl: string;
 }
 
 export interface EvolutionStage {
@@ -40,6 +49,7 @@ export interface PokeAPIPokemon {
       "official-artwork": { front_default: string };
     };
   };
+  species: { name: string; url: string };
 }
 
 export interface PokeAPISpecies {
@@ -50,6 +60,7 @@ export interface PokeAPISpecies {
     version: { name: string };
   }[];
   evolution_chain: { url: string };
+  varieties: { is_default: boolean; pokemon: { name: string; url: string } }[];
 }
 
 export interface PokeAPIType {

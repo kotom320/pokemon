@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { getPokemonDetail } from "@/lib/api";
 import { notFound } from "next/navigation";
+import AlternateForms from "@/components/AlternateForms";
 
 const TYPE_COLORS: Record<string, string> = {
   불꽃: "bg-orange-400",
@@ -42,7 +43,7 @@ export default async function PokemonDetailPage({
     <main className="max-w-2xl mx-auto px-4 py-8">
       <Link
         href="/"
-        className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 mb-6"
+        className="inline-flex items-center gap-1 text-sm text-gray-500 active:text-gray-800 mb-6 touch-manipulation py-2 pr-2"
       >
         ← 목록으로
       </Link>
@@ -50,8 +51,8 @@ export default async function PokemonDetailPage({
       <div className="bg-white rounded-2xl shadow-sm p-6">
         {/* 헤더 */}
         <div className="flex flex-col items-center gap-2 mb-6">
-          <span className="text-sm text-gray-400">
-            #{String(pokemon.id).padStart(3, "0")}
+          <span className="text-sm bg-gray-100 text-gray-500 px-3 py-1 rounded-full font-mono">
+            {String(pokemon.displayId).padStart(3, "0")}
           </span>
           <div className="relative w-40 h-40">
             <Image
@@ -99,6 +100,11 @@ export default async function PokemonDetailPage({
           </p>
         )}
 
+        {/* 다른 폼 */}
+        {pokemon.alternateForms.length > 0 && (
+          <AlternateForms forms={pokemon.alternateForms} />
+        )}
+
         {/* 스탯 */}
         <div>
           <h2 className="font-semibold text-gray-700 mb-3">기본 능력치</h2>
@@ -125,19 +131,19 @@ export default async function PokemonDetailPage({
 
       {/* 이전/다음 네비게이션 */}
       <div className="flex justify-between mt-6">
-        {numId > 1 && (
+        {pokemon.displayId > 1 && (
           <Link
-            href={`/pokemon/${numId - 1}`}
-            className="text-sm text-gray-500 hover:text-gray-800"
+            href={`/pokemon/${pokemon.displayId - 1}`}
+            className="text-sm text-gray-500 active:text-gray-800 touch-manipulation py-3 pr-4"
           >
-            ← #{String(numId - 1).padStart(3, "0")}
+            ← {String(pokemon.displayId - 1).padStart(3, "0")}
           </Link>
         )}
         <Link
-          href={`/pokemon/${numId + 1}`}
-          className="text-sm text-gray-500 hover:text-gray-800 ml-auto"
+          href={`/pokemon/${pokemon.displayId + 1}`}
+          className="text-sm text-gray-500 active:text-gray-800 touch-manipulation py-3 pl-4 ml-auto"
         >
-          #{String(numId + 1).padStart(3, "0")} →
+          {String(pokemon.displayId + 1).padStart(3, "0")} →
         </Link>
       </div>
     </main>
