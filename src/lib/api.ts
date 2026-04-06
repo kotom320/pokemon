@@ -205,7 +205,7 @@ function isExcludedForm(slug: string): boolean {
 }
 
 function getKoreanFormName(slug: string, baseKoreanName: string): string {
-  if (slug.endsWith("-gmax")) return `거대이맥스 ${baseKoreanName}`;
+  if (slug.endsWith("-gmax")) return `거다이맥스 ${baseKoreanName}`;
   if (slug.endsWith("-mega-x")) return `메가 ${baseKoreanName} X`;
   if (slug.endsWith("-mega-y")) return `메가 ${baseKoreanName} Y`;
   if (slug.endsWith("-mega")) return `메가 ${baseKoreanName}`;
