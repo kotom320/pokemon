@@ -66,3 +66,9 @@ export interface PokeAPISpecies {
 export interface PokeAPIType {
   names: { language: { name: string }; name: string }[];
 }
+
+export interface PrintEntry {
+  displayId: number;
+  koreanName: string;
+  isForm: boolean;
+}

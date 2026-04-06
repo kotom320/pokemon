@@ -6,6 +6,7 @@ import type {
   PokemonListItem,
   PokemonDetail,
   AlternateForm,
+  PrintEntry,
 } from "./types";
 
 const BASE_URL = "https://pokeapi.co/api/v2";
@@ -159,7 +160,7 @@ function getKoreanDescription(entries: FlavorTextEntry[], slug: string): string 
   const koEntries = entries.filter((e) => e.language.name === "ko");
   if (koEntries.length === 0) return "";
 
-  const regional = REGIONAL_VERSIONS.find((r) => slug.includes(r.match));
+  const regional = REGIONAL_VERSIONS.find((r) => slug.endsWith(r.match));
   if (regional) {
     const match = koEntries.find((e) => regional.versions.includes(e.version.name));
     if (match) return match.flavor_text.replace(/\f/g, " ");
@@ -172,10 +173,10 @@ function isRelevantForm(slug: string): boolean {
   return (
     slug.includes("-mega") ||
     slug.endsWith("-gmax") ||
-    slug.includes("-alola") ||
-    slug.includes("-galar") ||
-    slug.includes("-hisui") ||
-    slug.includes("-paldea")
+    slug.endsWith("-alola") ||
+    slug.endsWith("-galar") ||
+    slug.endsWith("-hisui") ||
+    slug.endsWith("-paldea")
   );
 }
 
@@ -184,10 +185,10 @@ function getKoreanFormName(slug: string, baseKoreanName: string): string {
   if (slug.endsWith("-mega-x")) return `메가 ${baseKoreanName} X`;
   if (slug.endsWith("-mega-y")) return `메가 ${baseKoreanName} Y`;
   if (slug.endsWith("-mega")) return `메가 ${baseKoreanName}`;
-  if (slug.includes("-alola")) return `알로라의 모습`;
-  if (slug.includes("-galar")) return `가라르의 모습`;
-  if (slug.includes("-hisui")) return `히스이의 모습`;
-  if (slug.includes("-paldea")) return `팔데아의 모습`;
+  if (slug.endsWith("-alola")) return `알로라의 모습`;
+  if (slug.endsWith("-galar")) return `가라르의 모습`;
+  if (slug.endsWith("-hisui")) return `히스이의 모습`;
+  if (slug.endsWith("-paldea")) return `팔데아의 모습`;
   return slug;
 }
 
@@ -223,4 +224,48 @@ async function getAlternateForms(
     .filter((r): r is PromiseFulfilledResult<AlternateForm> => r.status === "fulfilled")
     .map((r) => r.value)
     .filter((form) => form.id !== currentId); // 현재 폼 제외
+}
+
+export async function getAllPokemonForPrint(): Promise<PrintEntry[]> {
+  // 전체 species 목록 (URL만)
+  const res = await fetch(`${BASE_URL}/pokemon-species?limit=1025&offset=0`, {
+    next: { revalidate: 86400 },
+  });
+  const list: { results: { name: string; url: string }[] } = await res.json();
+
+  // 50개씩 배치로 species 상세 조회
+  const BATCH = 50;
+  const entries: PrintEntry[] = [];
+
+  for (let i = 0; i < list.results.length; i += BATCH) {
+    const batch = list.results.slice(i, i + BATCH);
+    const details = await Promise.all(
+      batch.map((s) =>
+        fetch(s.url, { next: { revalidate: 86400 } }).then((r) => r.json() as Promise<PokeAPISpecies & { id: number }>)
+      )
+    );
+
+    for (const species of details) {
+      const displayId: number = (species as unknown as { id: number }).id;
+      const koreanName =
+        (species as unknown as PokeAPISpecies).names.find((n) => n.language.name === "ko")?.name ?? "";
+      if (!koreanName) continue;
+
+      entries.push({ displayId, koreanName, isForm: false });
+
+      // 폼 추가 (slug만으로 이름 생성 — 추가 API 호출 없음)
+      const forms = (species as unknown as PokeAPISpecies).varieties.filter(
+        (v) => !v.is_default && isRelevantForm(v.pokemon.name)
+      );
+      for (const form of forms) {
+        entries.push({
+          displayId,
+          koreanName: getKoreanFormName(form.pokemon.name, koreanName),
+          isForm: true,
+        });
+      }
+    }
+  }
+
+  return entries.sort((a, b) => a.displayId - b.displayId);
 }
