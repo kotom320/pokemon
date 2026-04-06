@@ -6,6 +6,7 @@ import type {
   PokemonListItem,
   PokemonDetail,
   AlternateForm,
+  EvolutionNode,
   PrintEntry,
 } from "./types";
 
@@ -113,7 +114,10 @@ export async function getPokemonDetail(id: number): Promise<PokemonDetail> {
     value: s.base_stat,
   }));
 
-  const alternateForms = await getAlternateForms(species, baseKoreanName, id);
+  const [alternateForms, evolutionChain] = await Promise.all([
+    getAlternateForms(species, baseKoreanName, id),
+    getEvolutionChain(species.evolution_chain.url),
+  ]);
 
   return {
     id,
@@ -127,6 +131,7 @@ export async function getPokemonDetail(id: number): Promise<PokemonDetail> {
     stats,
     description,
     alternateForms,
+    evolutionChain,
   };
 }
 
@@ -230,6 +235,30 @@ async function getAlternateForms(
     .filter((r): r is PromiseFulfilledResult<AlternateForm> => r.status === "fulfilled")
     .map((r) => r.value)
     .filter((form) => form.id !== currentId);
+}
+
+interface PokeAPIEvolutionLink {
+  species: { name: string; url: string };
+  evolves_to: PokeAPIEvolutionLink[];
+}
+
+async function buildEvolutionNode(link: PokeAPIEvolutionLink): Promise<EvolutionNode> {
+  const speciesId = extractIdFromUrl(link.species.url);
+  const species = await fetchSpecies(speciesId);
+  const koreanName = species.names.find((n) => n.language.name === "ko")?.name ?? link.species.name;
+  const evolvesTo = await Promise.all(link.evolves_to.map(buildEvolutionNode));
+  return {
+    id: speciesId,
+    koreanName,
+    imageUrl: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${speciesId}.png`,
+    evolvesTo,
+  };
+}
+
+async function getEvolutionChain(url: string): Promise<EvolutionNode> {
+  const res = await fetch(url, { next: { revalidate: 86400 } });
+  const data: { chain: PokeAPIEvolutionLink } = await res.json();
+  return buildEvolutionNode(data.chain);
 }
 
 export async function getAllPokemonForPrint(): Promise<PrintEntry[]> {

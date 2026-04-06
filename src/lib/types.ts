@@ -12,7 +12,7 @@ export interface PokemonDetail extends PokemonListItem {
   weight: number;       // 단위: 헥토그램
   stats: { name: string; value: number }[];
   description: string;  // 한국어 도감 설명
-  evolutionChain?: EvolutionStage[];
+  evolutionChain?: EvolutionNode;
   alternateForms: AlternateForm[];
 }
 
@@ -23,10 +23,11 @@ export interface AlternateForm {
   imageUrl: string;
 }
 
-export interface EvolutionStage {
+export interface EvolutionNode {
   id: number;
   koreanName: string;
   imageUrl: string;
+  evolvesTo: EvolutionNode[];
 }
 
 // PokeAPI 응답 타입

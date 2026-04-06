@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import type { PokemonDetail } from "@/lib/types";
 import AlternateForms from "@/components/AlternateForms";
+import EvolutionChain from "@/components/EvolutionChain";
 
 const TYPE_COLORS: Record<string, string> = {
   불꽃: "bg-orange-400",
@@ -95,6 +96,11 @@ export default function PokemonDetailView({ initialData }: { initialData: Pokemo
         <p className="text-sm text-gray-600 leading-relaxed bg-gray-50 rounded-xl p-4 mb-6">
           {pokemon.description}
         </p>
+      )}
+
+      {/* 진화 */}
+      {pokemon.evolutionChain && (
+        <EvolutionChain root={pokemon.evolutionChain} currentId={pokemon.id} />
       )}
 
       {/* 다른 폼 */}
