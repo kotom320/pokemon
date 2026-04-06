@@ -30,16 +30,11 @@ export async function getPokemonList(
   limit: number = 20,
   offset: number = 0
 ): Promise<{ items: PokemonListItem[]; total: number }> {
-  const [listRes, speciesRes] = await Promise.all([
-    fetch(`${BASE_URL}/pokemon?limit=${limit}&offset=${offset}`, {
-      next: { revalidate: 3600 },
-    }),
-    fetch(`${BASE_URL}/pokemon-species?limit=1`, {
-      next: { revalidate: 86400 },
-    }),
-  ]);
+  const listRes = await fetch(
+    `${BASE_URL}/pokemon-species?limit=${limit}&offset=${offset}`,
+    { next: { revalidate: 3600 } }
+  );
   const list: PokeAPIListResponse = await listRes.json();
-  const speciesMeta: { count: number } = await speciesRes.json();
 
   const results = await Promise.allSettled(
     list.results.map(async (entry) => {
@@ -52,7 +47,7 @@ export async function getPokemonList(
     .filter((r): r is PromiseFulfilledResult<PokemonListItem> => r.status === "fulfilled")
     .map((r) => r.value);
 
-  return { items, total: speciesMeta.count };
+  return { items, total: list.count };
 }
 
 export async function getPokemonListItem(id: number): Promise<PokemonListItem> {
