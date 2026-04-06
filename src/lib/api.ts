@@ -213,6 +213,19 @@ function getKoreanFormName(slug: string, baseKoreanName: string): string {
   if (slug.endsWith("-galar")) return `가라르의 모습`;
   if (slug.endsWith("-hisui")) return `히스이의 모습`;
   if (slug.endsWith("-paldea")) return `팔데아의 모습`;
+  if (slug.endsWith("-hero")) return `마이티 폼`;
+  if (slug.endsWith("-zero")) return `제로 폼`;
+  if (slug.endsWith("-origin")) return `오리진 폼`;
+  if (slug.endsWith("-sky")) return `스카이 폼`;
+  if (slug.endsWith("-therian")) return `영물 폼`;
+  if (slug.endsWith("-black")) return `블랙 폼`;
+  if (slug.endsWith("-white")) return `화이트 폼`;
+  if (slug.endsWith("-resolute")) return `기개 폼`;
+  if (slug.endsWith("-crowned")) return `왕관 폼`;
+  if (slug.endsWith("-eternamax")) return `이터나맥스 ${baseKoreanName}`;
+  if (slug.endsWith("-terastal")) return `테라스탈 폼`;
+  if (slug.endsWith("-stellar")) return `스텔라 폼`;
+  if (slug.endsWith("-normal")) return `노말 폼`;
   return slug;
 }
 
@@ -240,19 +253,22 @@ async function getAlternateForms(
         ? baseKoreanName
         : (koreanFormName || getKoreanFormName(v.pokemon.name, baseKoreanName));
 
+      const imageUrl = pokemon.sprites.other["official-artwork"].front_default;
+      if (!imageUrl) return null; // artwork 없는 폼 제외
+
       return {
         id: pokemon.id,
         slug: v.pokemon.name,
         koreanName,
-        imageUrl: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemon.id}.png`,
+        imageUrl,
       };
     })
   );
 
   return results
-    .filter((r): r is PromiseFulfilledResult<AlternateForm> => r.status === "fulfilled")
+    .filter((r): r is PromiseFulfilledResult<AlternateForm | null> => r.status === "fulfilled")
     .map((r) => r.value)
-    .filter((form) => form.id !== currentId);
+    .filter((form): form is AlternateForm => form !== null && form.id !== currentId);
 }
 
 interface PokeAPIEvolutionLink {

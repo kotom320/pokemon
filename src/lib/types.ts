@@ -47,7 +47,7 @@ export interface PokeAPIPokemon {
   stats: { base_stat: number; stat: { name: string } }[];
   sprites: {
     other: {
-      "official-artwork": { front_default: string };
+      "official-artwork": { front_default: string | null };
     };
   };
   species: { name: string; url: string };
