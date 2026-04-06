@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import type { PokemonDetail } from "@/lib/types";
 import AlternateForms from "@/components/AlternateForms";
 import EvolutionChain from "@/components/EvolutionChain";
@@ -32,6 +33,7 @@ const STAT_MAX = 255;
 export default function PokemonDetailView({ initialData }: { initialData: PokemonDetail }) {
   const [pokemon, setPokemon] = useState<PokemonDetail>(initialData);
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   async function handleFormSelect(formId: number) {
     setLoading(true);
@@ -100,7 +102,18 @@ export default function PokemonDetailView({ initialData }: { initialData: Pokemo
 
       {/* 진화 */}
       {pokemon.evolutionChain && (
-        <EvolutionChain root={pokemon.evolutionChain} currentId={pokemon.id} />
+        <EvolutionChain
+          root={pokemon.evolutionChain}
+          currentId={pokemon.displayId}
+          onNavigate={(id) => {
+            if (id === pokemon.displayId) {
+              // 같은 종 — 인라인으로 기본 폼 복원
+              handleFormSelect(id);
+            } else {
+              router.replace(`/pokemon/${id}`);
+            }
+          }}
+        />
       )}
 
       {/* 다른 폼 */}
