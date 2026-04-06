@@ -46,7 +46,7 @@ export default function PokemonDetailView({ initialData }: { initialData: Pokemo
   }
 
   return (
-    <div className={`bg-white rounded-2xl shadow-sm p-6 transition-opacity duration-150 ${loading ? "opacity-50" : ""}`}>
+    <div className={`w-full bg-white rounded-2xl shadow-sm p-6 transition-opacity duration-150 ${loading ? "opacity-50" : ""}`}>
       {/* 헤더 */}
       <div className="flex flex-col items-center gap-2 mb-6">
         <span className="text-sm bg-gray-100 text-gray-500 px-3 py-1 rounded-full font-mono">

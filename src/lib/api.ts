@@ -189,6 +189,20 @@ function isRelevantForm(slug: string): boolean {
   );
 }
 
+// 이벤트/코스튬 한정 폼 — 도감에서 제외
+function isExcludedForm(slug: string): boolean {
+  return (
+    slug.endsWith("-cap") ||        // 피카츄 모자 시리즈
+    slug.endsWith("-cosplay") ||    // 피카츄 코스프레
+    slug.endsWith("-starter") ||    // 피카츄 스타터
+    slug.endsWith("-rock-star") ||  // 피카츄 코스튬
+    slug.endsWith("-belle") ||
+    slug.endsWith("-pop-star") ||
+    slug.endsWith("-phd") ||
+    slug.endsWith("-libre")
+  );
+}
+
 function getKoreanFormName(slug: string, baseKoreanName: string): string {
   if (slug.endsWith("-gmax")) return `거대이맥스 ${baseKoreanName}`;
   if (slug.endsWith("-mega-x")) return `메가 ${baseKoreanName} X`;
@@ -206,10 +220,13 @@ async function getAlternateForms(
   baseKoreanName: string,
   currentId: number,
 ): Promise<AlternateForm[]> {
-  if (species.varieties.length <= 1) return [];
+  const varieties = species.varieties.filter(
+    (v) => v.is_default || !isExcludedForm(v.pokemon.name)
+  );
+  if (varieties.length <= 1) return [];
 
   const results = await Promise.allSettled(
-    species.varieties.map(async (v) => {
+    varieties.map(async (v) => {
       const [pokemonRes, formRes] = await Promise.all([
         fetch(`${BASE_URL}/pokemon/${v.pokemon.name}`, { next: { revalidate: 86400 } }),
         fetch(`${BASE_URL}/pokemon-form/${v.pokemon.name}`, { next: { revalidate: 86400 } }),

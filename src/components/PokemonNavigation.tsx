@@ -18,22 +18,29 @@ export default function PokemonNavigation({ displayId }: Props) {
         ← 목록으로
       </button>
 
-      <div className="flex justify-between mt-6">
-        {displayId > 1 && (
+      {/* prev/next 하단 고정 */}
+      <div className="fixed bottom-0 left-0 right-0 flex justify-between bg-white border-t border-gray-100 px-6 py-3 z-10">
+        {displayId > 1 ? (
           <button
             onClick={() => router.replace(`/pokemon/${displayId - 1}`)}
-            className="text-sm text-gray-500 active:text-gray-800 touch-manipulation py-3 pr-4"
+            className="text-sm text-gray-500 active:text-gray-800 touch-manipulation py-2 pr-4"
           >
             ← {String(displayId - 1).padStart(3, "0")}
           </button>
+        ) : (
+          <span />
         )}
-        <button
-          onClick={() => router.replace(`/pokemon/${displayId + 1}`)}
-          className="text-sm text-gray-500 active:text-gray-800 touch-manipulation py-3 pl-4 ml-auto"
-        >
-          {String(displayId + 1).padStart(3, "0")} →
-        </button>
+        {displayId < 1025 && (
+          <button
+            onClick={() => router.replace(`/pokemon/${displayId + 1}`)}
+            className="text-sm text-gray-500 active:text-gray-800 touch-manipulation py-2 pl-4"
+          >
+            {String(displayId + 1).padStart(3, "0")} →
+          </button>
+        )}
       </div>
+      {/* fixed bar 높이만큼 여백 확보 */}
+      <div className="h-12" />
     </>
   );
 }
