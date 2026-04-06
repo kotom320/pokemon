@@ -51,8 +51,10 @@ export async function getPokemonList(
 }
 
 export async function getPokemonListItem(id: number): Promise<PokemonListItem> {
-  const pokemon = await fetchPokemon(id);
-  const species = await fetchSpecies(pokemon.species.url);
+  const [pokemon, species] = await Promise.all([
+    fetchPokemon(id),
+    fetchSpecies(id),
+  ]);
 
   const koreanName =
     species.names.find((n) => n.language.name === "ko")?.name ?? pokemon.name;
@@ -71,8 +73,10 @@ export async function getPokemonListItem(id: number): Promise<PokemonListItem> {
 }
 
 export async function getPokemonDetail(id: number): Promise<PokemonDetail> {
-  const pokemon = await fetchPokemon(id);
-  const species = await fetchSpecies(pokemon.species.url);
+  const [pokemon, species] = await Promise.all([
+    fetchPokemon(id),
+    fetchSpecies(id),
+  ]);
 
   const baseKoreanName =
     species.names.find((n) => n.language.name === "ko")?.name ?? pokemon.name;
