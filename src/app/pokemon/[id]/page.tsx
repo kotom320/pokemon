@@ -1,8 +1,8 @@
 import Image from "next/image";
-import Link from "next/link";
 import { getPokemonDetail } from "@/lib/api";
 import { notFound } from "next/navigation";
 import AlternateForms from "@/components/AlternateForms";
+import PokemonNavigation from "@/components/PokemonNavigation";
 
 const TYPE_COLORS: Record<string, string> = {
   불꽃: "bg-orange-400",
@@ -41,12 +41,7 @@ export default async function PokemonDetailPage({
 
   return (
     <main className="max-w-2xl mx-auto px-4 py-8">
-      <Link
-        href="/"
-        className="inline-flex items-center gap-1 text-sm text-gray-500 active:text-gray-800 mb-6 touch-manipulation py-2 pr-2"
-      >
-        ← 목록으로
-      </Link>
+      <PokemonNavigation displayId={pokemon.displayId} />
 
       <div className="bg-white rounded-2xl shadow-sm p-6">
         {/* 헤더 */}
@@ -129,23 +124,6 @@ export default async function PokemonDetailPage({
         </div>
       </div>
 
-      {/* 이전/다음 네비게이션 */}
-      <div className="flex justify-between mt-6">
-        {pokemon.displayId > 1 && (
-          <Link
-            href={`/pokemon/${pokemon.displayId - 1}`}
-            className="text-sm text-gray-500 active:text-gray-800 touch-manipulation py-3 pr-4"
-          >
-            ← {String(pokemon.displayId - 1).padStart(3, "0")}
-          </Link>
-        )}
-        <Link
-          href={`/pokemon/${pokemon.displayId + 1}`}
-          className="text-sm text-gray-500 active:text-gray-800 touch-manipulation py-3 pl-4 ml-auto"
-        >
-          {String(pokemon.displayId + 1).padStart(3, "0")} →
-        </Link>
-      </div>
     </main>
   );
 }
