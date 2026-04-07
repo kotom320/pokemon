@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* 페이지 전환 시 흰 화면 깜빡임 방지 */
+@view-transition {
+  navigation: auto;
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
