@@ -36,5 +36,10 @@ export async function GET(req: NextRequest) {
     types: row.types,
   }));
 
-  return NextResponse.json({ items, total: count ?? 0 });
+  return NextResponse.json({ items, total: count ?? 0 }, {
+    headers: {
+      // 브라우저/CDN 1시간 캐시, 이후 24시간은 stale 응답하며 백그라운드 갱신
+      "Cache-Control": "public, max-age=3600, stale-while-revalidate=86400",
+    },
+  });
 }
