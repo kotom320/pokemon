@@ -7,10 +7,13 @@ export async function GET(req: NextRequest) {
   const offset = Number(searchParams.get("offset") ?? 0);
   const generation = searchParams.get("generation");
 
+  const type = searchParams.get("type") ?? undefined;
+
   const data = await getPokemonList(
     limit,
     offset,
     generation ? Number(generation) : undefined,
+    type,
   );
   return NextResponse.json(data);
 }

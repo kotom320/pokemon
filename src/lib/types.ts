@@ -66,6 +66,7 @@ export interface PokeAPISpecies {
 
 export interface PokeAPIType {
   names: { language: { name: string }; name: string }[];
+  pokemon: { pokemon: { name: string; url: string } }[];
 }
 
 export interface PrintEntry {
@@ -73,3 +74,14 @@ export interface PrintEntry {
   koreanName: string;
   isForm: boolean;
 }
+
+// 타입 한국어 → 영문 slug 매핑
+export const TYPE_KO_TO_EN: Record<string, string> = {
+  노말: "normal", 불꽃: "fire", 물: "water", 풀: "grass",
+  전기: "electric", 얼음: "ice", 격투: "fighting", 독: "poison",
+  땅: "ground", 비행: "flying", 에스퍼: "psychic", 벌레: "bug",
+  바위: "rock", 고스트: "ghost", 드래곤: "dragon", 악: "dark",
+  강철: "steel", 페어리: "fairy",
+};
+
+export const ALL_TYPES = Object.keys(TYPE_KO_TO_EN);

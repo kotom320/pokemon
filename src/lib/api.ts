@@ -9,6 +9,7 @@ import type {
   EvolutionNode,
   PrintEntry,
 } from "./types";
+import { TYPE_KO_TO_EN } from "./types";
 
 const BASE_URL = "https://pokeapi.co/api/v2";
 
@@ -43,11 +44,24 @@ export async function getPokemonList(
   limit: number = 20,
   offset: number = 0,
   generation?: number,
+  type?: string,
 ): Promise<{ items: PokemonListItem[]; total: number }> {
   let ids: number[];
   let total: number;
 
-  if (generation) {
+  if (type) {
+    const typeEn = TYPE_KO_TO_EN[type];
+    if (!typeEn) return { items: [], total: 0 };
+    const res = await fetch(`${BASE_URL}/type/${typeEn}`, { next: { revalidate: 86400 } });
+    const data: PokeAPIType = await res.json();
+    // 1-1025 범위의 기본 포켓몬만
+    const allIds = data.pokemon
+      .map((p) => extractIdFromUrl(p.pokemon.url))
+      .filter((id) => id >= 1 && id <= 1025)
+      .sort((a, b) => a - b);
+    total = allIds.length;
+    ids = allIds.slice(offset, offset + limit);
+  } else if (generation) {
     const { start, end } = GENERATION_RANGES[generation];
     total = end - start + 1;
     ids = Array.from(
@@ -70,6 +84,46 @@ export async function getPokemonList(
     .map((r) => r.value);
 
   return { items, total };
+}
+
+// 검색용 이름 캐시 (서버 메모리에 유지)
+let searchCache: { id: number; koreanName: string }[] | null = null;
+
+export async function searchPokemon(query: string): Promise<PokemonListItem[]> {
+  if (!query.trim()) return [];
+
+  if (!searchCache) {
+    const res = await fetch(`${BASE_URL}/pokemon-species?limit=1025`, {
+      next: { revalidate: 86400 },
+    });
+    const list: { results: { name: string; url: string }[] } = await res.json();
+
+    const BATCH = 50;
+    const cache: { id: number; koreanName: string }[] = [];
+    for (let i = 0; i < list.results.length; i += BATCH) {
+      const batch = list.results.slice(i, i + BATCH);
+      const details = await Promise.all(
+        batch.map((s) => fetch(s.url, { next: { revalidate: 86400 } }).then((r) => r.json()))
+      );
+      for (const s of details) {
+        const korean = s.names?.find((n: { language: { name: string }; name: string }) => n.language.name === "ko")?.name;
+        if (korean) cache.push({ id: s.id, koreanName: korean });
+      }
+    }
+    searchCache = cache;
+  }
+
+  const q = query.trim().toLowerCase();
+  const matched = searchCache.filter(
+    (p) =>
+      p.koreanName.includes(query.trim()) ||
+      String(p.id).padStart(3, "0").startsWith(q)
+  );
+
+  const results = await Promise.allSettled(matched.slice(0, 40).map((p) => getPokemonListItem(p.id)));
+  return results
+    .filter((r): r is PromiseFulfilledResult<PokemonListItem> => r.status === "fulfilled")
+    .map((r) => r.value);
 }
 
 export async function getPokemonListItem(id: number): Promise<PokemonListItem> {
