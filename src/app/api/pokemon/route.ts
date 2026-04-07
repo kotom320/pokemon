@@ -1,19 +1,40 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getPokemonList } from "@/lib/api";
+import { supabase } from "@/lib/supabase";
+import { GENERATION_RANGES } from "@/lib/api";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
   const limit = Number(searchParams.get("limit") ?? 20);
   const offset = Number(searchParams.get("offset") ?? 0);
-  const generation = searchParams.get("generation");
+  const generation = searchParams.get("generation") ? Number(searchParams.get("generation")) : null;
+  const type = searchParams.get("type") ?? null;
 
-  const type = searchParams.get("type") ?? undefined;
+  let query = supabase.from("pokemon").select("*", { count: "exact" });
 
-  const data = await getPokemonList(
-    limit,
-    offset,
-    generation ? Number(generation) : undefined,
-    type,
-  );
-  return NextResponse.json(data);
+  if (generation && GENERATION_RANGES[generation]) {
+    const { start, end } = GENERATION_RANGES[generation];
+    query = query.gte("id", start).lte("id", end);
+  }
+
+  if (type) {
+    query = query.contains("types", [type]);
+  }
+
+  const { data, count, error } = await query
+    .order("id")
+    .range(offset, offset + limit - 1);
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  const items = (data ?? []).map((row) => ({
+    id: row.id,
+    name: row.name,
+    koreanName: row.korean_name,
+    imageUrl: row.image_url,
+    types: row.types,
+  }));
+
+  return NextResponse.json({ items, total: count ?? 0 });
 }
