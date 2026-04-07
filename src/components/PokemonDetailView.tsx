@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import type { PokemonDetail } from "@/lib/types";
@@ -34,16 +34,24 @@ export default function PokemonDetailView({ initialData }: { initialData: Pokemo
   const [pokemon, setPokemon] = useState<PokemonDetail>(initialData);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const abortRef = useRef<AbortController | null>(null);
 
   async function handleFormSelect(formId: number) {
+    // 진행 중인 요청 취소
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setLoading(true);
     try {
-      const res = await fetch(`/api/pokemon/${formId}`);
+      const res = await fetch(`/api/pokemon/${formId}`, { signal: controller.signal });
       if (!res.ok) throw new Error();
       const data: PokemonDetail = await res.json();
       setPokemon(data);
+    } catch (err) {
+      if ((err as Error).name === "AbortError") return; // 취소된 요청은 무시
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) setLoading(false);
     }
   }
 

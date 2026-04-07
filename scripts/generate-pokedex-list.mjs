@@ -1,7 +1,7 @@
 /**
- * 포켓몬 도감 목록 이미지 생성 스크립트
+ * 포켓몬 도감 이미지 생성 스크립트
  * 실행: node scripts/generate-pokedex-list.mjs
- * 출력: output/pokedex-page-1.png, pokedex-page-2.png, ...
+ * 출력: output/pokedex-page-01.png, 02.png, ...
  */
 
 import satori from "satori";
@@ -16,15 +16,14 @@ const BASE_URL = "https://pokeapi.co/api/v2";
 // A4 @ 150dpi
 const PAGE_W = 1240;
 const PAGE_H = 1754;
-const MARGIN = 60;
-const COLS = 5;
-const COL_W = (PAGE_W - MARGIN * 2) / COLS;
-const ROW_H = 22;
-const HEADER_H = 80;
-const ROWS_PER_COL = Math.floor((PAGE_H - MARGIN * 2 - HEADER_H) / ROW_H);
-const ENTRIES_PER_PAGE = COLS * ROWS_PER_COL;
+const MARGIN = 48;
+const COLS = 6;
+const ROWS = 8;
+const PER_PAGE = COLS * ROWS;
+const CELL_W = Math.floor((PAGE_W - MARGIN * 2) / COLS);
+const CELL_H = Math.floor((PAGE_H - MARGIN * 2 - 60) / ROWS); // 60 = 헤더
+const IMG_SIZE = Math.floor(CELL_H * 0.68);
 
-// 한국어 폰트 로드 (시스템에 없으면 fallback)
 function loadFont() {
   const candidates = [
     "/System/Library/Fonts/Supplemental/AppleGothic.ttf",
@@ -32,21 +31,26 @@ function loadFont() {
     "/usr/share/fonts/truetype/nanum/NanumGothic.ttf",
   ];
   for (const p of candidates) {
-    try {
-      return readFileSync(p);
-    } catch {}
+    try { return readFileSync(p); } catch {}
   }
-  throw new Error(
-    "한국어 폰트를 찾을 수 없습니다.\n" +
-    "다음 경로 중 하나에 폰트 파일을 두세요:\n" +
-    candidates.join("\n")
-  );
+  throw new Error("한국어 폰트를 찾을 수 없습니다.\n" + candidates.join("\n"));
 }
 
-// PokeAPI 호출
 async function fetchJson(url) {
   const res = await fetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status}: ${url}`);
   return res.json();
+}
+
+async function fetchImageAsBase64(url) {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const buf = await res.arrayBuffer();
+    return "data:image/png;base64," + Buffer.from(buf).toString("base64");
+  } catch {
+    return null;
+  }
 }
 
 function isRelevantForm(slug) {
@@ -73,7 +77,7 @@ function getKoreanFormName(slug, baseName) {
 }
 
 async function fetchAllEntries() {
-  console.log("📡 전체 포켓몬 species 목록 가져오는 중...");
+  console.log("📡 전체 포켓몬 정보 가져오는 중...");
   const list = await fetchJson(`${BASE_URL}/pokemon-species?limit=1025&offset=0`);
 
   const entries = [];
@@ -81,22 +85,30 @@ async function fetchAllEntries() {
 
   for (let i = 0; i < list.results.length; i += BATCH) {
     const batch = list.results.slice(i, i + BATCH);
-    const details = await Promise.all(batch.map((s) => fetchJson(s.url)));
+    const speciesList = await Promise.all(batch.map((s) => fetchJson(s.url)));
 
-    for (const species of details) {
+    for (const species of speciesList) {
       const koreanName = species.names.find((n) => n.language.name === "ko")?.name;
       if (!koreanName) continue;
 
-      entries.push({ displayId: species.id, koreanName, isForm: false });
+      entries.push({
+        displayId: species.id,
+        imageId: species.id,
+        koreanName,
+        isForm: false,
+      });
 
+      // 폼: 실제 pokemon ID를 가져와야 이미지 URL을 알 수 있음
       const forms = species.varieties.filter(
         (v) => !v.is_default && isRelevantForm(v.pokemon.name)
       );
       for (const form of forms) {
         entries.push({
           displayId: species.id,
+          imageId: null, // 아래에서 별도 조회
           koreanName: getKoreanFormName(form.pokemon.name, koreanName),
           isForm: true,
+          slug: form.pokemon.name,
         });
       }
     }
@@ -104,16 +116,135 @@ async function fetchAllEntries() {
     const pct = Math.min(100, Math.round(((i + BATCH) / list.results.length) * 100));
     process.stdout.write(`\r  진행: ${pct}% (${Math.min(i + BATCH, list.results.length)}/${list.results.length})`);
   }
-  console.log("\n✅ 데이터 로드 완료:", entries.length, "개");
-  return entries.sort((a, b) => a.displayId - b.displayId);
+
+  // 폼의 실제 imageId 조회
+  const formsWithoutId = entries.filter((e) => e.isForm && e.imageId === null);
+  if (formsWithoutId.length > 0) {
+    console.log(`\n  폼 이미지 ID 조회 중 (${formsWithoutId.length}개)...`);
+    const FBATCH = 20;
+    for (let i = 0; i < formsWithoutId.length; i += FBATCH) {
+      const batch = formsWithoutId.slice(i, i + FBATCH);
+      await Promise.all(
+        batch.map(async (entry) => {
+          try {
+            const p = await fetchJson(`${BASE_URL}/pokemon/${entry.slug}`);
+            entry.imageId = p.id;
+          } catch {
+            entry.imageId = entry.displayId; // fallback
+          }
+        })
+      );
+    }
+  }
+
+  console.log(`\n✅ 총 ${entries.length}개 항목 준비 완료`);
+  return entries.sort((a, b) => a.displayId - b.displayId || (a.isForm ? 1 : -1));
 }
 
-function buildPageJsx(pageEntries, pageNum, totalPages, font) {
-  const columns = Array.from({ length: COLS }, (_, ci) =>
-    pageEntries.slice(ci * ROWS_PER_COL, (ci + 1) * ROWS_PER_COL)
+async function buildPage(pageEntries, pageNum, totalPages, font) {
+  // 이미지 병렬 다운로드 — null이면 해당 항목 제외
+  process.stdout.write(`\r  ${pageNum}/${totalPages} 이미지 다운로드 중...`);
+  const rawImages = await Promise.all(
+    pageEntries.map((e) =>
+      fetchImageAsBase64(
+        `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${e.imageId}.png`
+      )
+    )
   );
 
-  return {
+  // 이미지 없는 항목 제거
+  const validPairs = pageEntries
+    .map((entry, i) => ({ entry, img: rawImages[i] }))
+    .filter((p) => p.img !== null);
+
+  const filteredEntries = validPairs.map((p) => p.entry);
+  const images = validPairs.map((p) => p.img);
+
+  // 빈 셀로 채우기 (마지막 페이지 또는 제외된 항목만큼)
+  while (filteredEntries.length < PER_PAGE) {
+    filteredEntries.push(null);
+    images.push(null);
+  }
+  const finalEntries = filteredEntries;
+
+  const cells = finalEntries.map((entry, i) => {
+    if (!entry) {
+      return {
+        type: "div",
+        props: { style: { width: CELL_W, height: CELL_H, display: "flex" }, children: " " },
+      };
+    }
+    return {
+      type: "div",
+      props: {
+        style: {
+          width: CELL_W,
+          height: CELL_H,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 4,
+          padding: "4px 2px",
+        },
+        children: [
+          images[i]
+            ? {
+                type: "img",
+                props: {
+                  src: images[i],
+                  width: IMG_SIZE,
+                  height: IMG_SIZE,
+                  style: { objectFit: "contain" },
+                },
+              }
+            : {
+                type: "div",
+                props: {
+                  style: { width: IMG_SIZE, height: IMG_SIZE, display: "flex", background: "#f3f4f6", borderRadius: 8 },
+                  children: " ",
+                },
+              },
+          {
+            type: "span",
+            props: {
+              style: {
+                fontSize: 11,
+                color: "#9ca3af",
+                fontVariantNumeric: "tabular-nums",
+                lineHeight: 1,
+              },
+              children: String(entry.displayId).padStart(3, "0"),
+            },
+          },
+          {
+            type: "span",
+            props: {
+              style: {
+                fontSize: entry.isForm ? 11 : 13,
+                fontWeight: entry.isForm ? "normal" : "bold",
+                color: entry.isForm ? "#6b7280" : "#111827",
+                textAlign: "center",
+                lineHeight: 1.2,
+                maxWidth: CELL_W - 8,
+              },
+              children: entry.koreanName,
+            },
+          },
+        ],
+      },
+    };
+  });
+
+  const rows = Array.from({ length: ROWS }, (_, r) => ({
+    type: "div",
+    props: {
+      style: { display: "flex", flexDirection: "row" },
+      children: cells.slice(r * COLS, (r + 1) * COLS),
+    },
+  }));
+
+  const jsx = {
     type: "div",
     props: {
       style: {
@@ -124,9 +255,9 @@ function buildPageJsx(pageEntries, pageNum, totalPages, font) {
         display: "flex",
         flexDirection: "column",
         padding: MARGIN,
+        gap: 0,
       },
       children: [
-        // 헤더
         {
           type: "div",
           props: {
@@ -134,123 +265,66 @@ function buildPageJsx(pageEntries, pageNum, totalPages, font) {
               display: "flex",
               justifyContent: "space-between",
               alignItems: "flex-end",
-              marginBottom: 24,
               borderBottom: "2px solid #e5e7eb",
-              paddingBottom: 12,
+              paddingBottom: 10,
+              marginBottom: 10,
+              height: 50,
             },
             children: [
               {
                 type: "span",
                 props: {
-                  style: { fontSize: 28, fontWeight: "bold", color: "#111827" },
+                  style: { fontSize: 24, fontWeight: "bold", color: "#111827" },
                   children: "포켓몬 도감",
                 },
               },
               {
                 type: "span",
                 props: {
-                  style: { fontSize: 14, color: "#6b7280" },
+                  style: { fontSize: 13, color: "#6b7280" },
                   children: `${pageNum} / ${totalPages}`,
                 },
               },
             ],
           },
         },
-        // 컬럼 그리드
         {
           type: "div",
           props: {
-            style: {
-              display: "flex",
-              flex: 1,
-              gap: 8,
-            },
-            children: columns.map((colEntries, ci) => ({
-              type: "div",
-              props: {
-                key: ci,
-                style: {
-                  display: "flex",
-                  flexDirection: "column",
-                  flex: 1,
-                },
-                children: colEntries.map((entry, ri) => ({
-                  type: "div",
-                  props: {
-                    key: ri,
-                    style: {
-                      display: "flex",
-                      alignItems: "baseline",
-                      gap: 6,
-                      height: ROW_H,
-                      paddingLeft: entry.isForm ? 10 : 0,
-                    },
-                    children: [
-                      {
-                        type: "span",
-                        props: {
-                          style: {
-                            fontSize: 10,
-                            color: "#9ca3af",
-                            fontVariantNumeric: "tabular-nums",
-                            minWidth: 28,
-                          },
-                          children: String(entry.displayId).padStart(3, "0"),
-                        },
-                      },
-                      {
-                        type: "span",
-                        props: {
-                          style: {
-                            fontSize: entry.isForm ? 11 : 13,
-                            color: entry.isForm ? "#9ca3af" : "#111827",
-                            fontWeight: entry.isForm ? "normal" : "bold",
-                          },
-                          children: entry.koreanName,
-                        },
-                      },
-                    ],
-                  },
-                })),
-              },
-            })),
+            style: { display: "flex", flexDirection: "column", flex: 1 },
+            children: rows,
           },
         },
       ],
     },
   };
+
+  const svg = await satori(jsx, {
+    width: PAGE_W,
+    height: PAGE_H,
+    fonts: [{ name: "Korean", data: font, weight: 400, style: "normal" }],
+  });
+
+  return new Resvg(svg, { fitTo: { mode: "width", value: PAGE_W } }).render().asPng();
 }
 
 async function main() {
   const font = loadFont();
   const entries = await fetchAllEntries();
-  const totalPages = Math.ceil(entries.length / ENTRIES_PER_PAGE);
+  const totalPages = Math.ceil(entries.length / PER_PAGE);
 
   const outDir = join(__dirname, "../output");
   mkdirSync(outDir, { recursive: true });
 
-  console.log(`\n🖼  총 ${totalPages}장 이미지 생성 중...`);
+  console.log(`\n🖼  총 ${totalPages}장 생성 중 (페이지당 ${PER_PAGE}마리)...\n`);
 
   for (let page = 1; page <= totalPages; page++) {
-    const pageEntries = entries.slice(
-      (page - 1) * ENTRIES_PER_PAGE,
-      page * ENTRIES_PER_PAGE
-    );
-
-    const jsx = buildPageJsx(pageEntries, page, totalPages, font);
-
-    const svg = await satori(jsx, {
-      width: PAGE_W,
-      height: PAGE_H,
-      fonts: [{ name: "Korean", data: font, weight: 400, style: "normal" }],
-    });
-
-    const resvg = new Resvg(svg, { fitTo: { mode: "width", value: PAGE_W } });
-    const png = resvg.render().asPng();
-
+    const pageEntries = entries.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+    const png = await buildPage([...pageEntries], page, totalPages, font);
     const outPath = join(outDir, `pokedex-page-${String(page).padStart(2, "0")}.png`);
     writeFileSync(outPath, png);
-    process.stdout.write(`\r  ${page}/${totalPages} 완료`);
+    process.stdout.write(`\r  ${page}/${totalPages} 저장 완료: ${outPath.split("/").pop()}`);
+    console.log();
   }
 
   console.log(`\n✅ output/ 폴더에 ${totalPages}개 PNG 파일이 생성되었습니다.`);

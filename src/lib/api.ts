@@ -201,27 +201,52 @@ function getKoreanDescription(entries: FlavorTextEntry[], slug: string): string 
 
 function isRelevantForm(slug: string): boolean {
   return (
+    // 메가진화 / 거다이맥스
     slug.includes("-mega") ||
     slug.endsWith("-gmax") ||
+    slug.endsWith("-eternamax") ||
+    // 지역 폼
     slug.endsWith("-alola") ||
     slug.endsWith("-galar") ||
     slug.endsWith("-hisui") ||
-    slug.endsWith("-paldea")
+    slug.endsWith("-paldea") ||
+    // 주요 폼 변경 (다른 스탯/타입을 가지는 폼들)
+    slug.endsWith("-origin") ||
+    slug.endsWith("-sky") ||
+    slug.endsWith("-therian") ||
+    slug.endsWith("-black") ||
+    slug.endsWith("-white") ||
+    slug.endsWith("-resolute") ||
+    slug.endsWith("-crowned") ||
+    slug.endsWith("-hero") ||
+    slug.endsWith("-zero") ||
+    slug.endsWith("-terastal") ||
+    slug.endsWith("-stellar")
   );
 }
 
-// 이벤트/코스튬 한정 폼 — 도감에서 제외
+// 도감에서 제외할 폼
 function isExcludedForm(slug: string): boolean {
   return (
-    slug.endsWith("-cap") ||        // 피카츄 모자 시리즈
-    slug.endsWith("-cosplay") ||    // 피카츄 코스프레
-    slug.endsWith("-starter") ||    // 피카츄 스타터
-    slug.endsWith("-rock-star") ||  // 피카츄 코스튬
+    // 피카츄 이벤트/코스튬 시리즈
+    slug.endsWith("-cap") ||
+    slug.endsWith("-cosplay") ||
+    slug.endsWith("-starter") ||
+    slug.endsWith("-rock-star") ||
     slug.endsWith("-belle") ||
     slug.endsWith("-pop-star") ||
     slug.endsWith("-phd") ||
     slug.endsWith("-libre") ||
-    slug.endsWith("-totem")         // 토템 포켓몬 (알로라 보스 전용 초대형 버전)
+    // 토템 포켓몬 (알로라 보스 전용 초대형)
+    slug.endsWith("-totem") ||
+    // 언논 (알파벳 28종 — 외형만 다름)
+    /^unown-/.test(slug) ||
+    // 알크레이드 장식 폼 (수십 가지 — 외형만 다름)
+    /^alcremie-/.test(slug) ||
+    // 비비용 날개 무늬 폼 (18종 — 외형만 다름)
+    /^vivillon-/.test(slug) ||
+    // 스프링 날개무늬도 동일
+    /^spewpa-/.test(slug)
   );
 }
 
