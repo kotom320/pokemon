@@ -54,11 +54,15 @@ export async function getPokemonList(
     if (!typeEn) return { items: [], total: 0 };
     const res = await fetch(`${BASE_URL}/type/${typeEn}`, { next: { revalidate: 86400 } });
     const data: PokeAPIType = await res.json();
-    // 1-1025 범위의 기본 포켓몬만
-    const allIds = data.pokemon
+    let allIds = data.pokemon
       .map((p) => extractIdFromUrl(p.pokemon.url))
       .filter((id) => id >= 1 && id <= 1025)
       .sort((a, b) => a - b);
+    // 세대 AND 조건
+    if (generation && GENERATION_RANGES[generation]) {
+      const { start, end } = GENERATION_RANGES[generation];
+      allIds = allIds.filter((id) => id >= start && id <= end);
+    }
     total = allIds.length;
     ids = allIds.slice(offset, offset + limit);
   } else if (generation) {

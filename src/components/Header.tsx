@@ -65,7 +65,7 @@ export default function Header() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="이름 또는 번호"
-            className="w-full pl-8 pr-3 py-2 rounded-full bg-gray-100 text-sm outline-none focus:ring-2 focus:ring-red-300"
+            className="w-full pl-8 pr-3 py-2 rounded-full bg-gray-100 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-red-300"
           />
         </div>
 
@@ -92,11 +92,9 @@ export default function Header() {
         type={type}
         onGenerationChange={(gen) => {
           updateParam("generation", gen !== null ? String(gen) : null);
-          setDrawerOpen(false);
         }}
         onTypeChange={(t) => {
           updateParam("type", t);
-          setDrawerOpen(false);
         }}
         onReset={handleReset}
       />

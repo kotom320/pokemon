@@ -57,7 +57,9 @@ export default function FilterDrawer({
               onClick={() => onTypeChange(type === t ? null : t)}
               className={`px-3 py-1 rounded-full text-sm font-medium text-white transition-opacity touch-manipulation ${
                 TYPE_COLORS[t] ?? "bg-gray-400"
-              } ${type !== null && type !== t ? "opacity-40" : "opacity-100"}`}
+              } ${type !== null && type !== t ? "opacity-40" : "opacity-100"} ${
+                type === t ? "ring-2 ring-offset-1 ring-gray-700" : ""
+              }`}
             >
               {t}
             </button>
