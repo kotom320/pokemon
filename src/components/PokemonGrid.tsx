@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import PokemonCard from "./PokemonCard";
 import type { PokemonListItem } from "@/lib/types";
@@ -49,15 +49,21 @@ export default function PokemonGrid({ gridKey, initialItems, total, generation, 
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const items = data.pages.flatMap((p) => p.items);
+  // 뒤로가기 시 스크롤 점프 동안 이미지 깜빡임 방지
+  const [opacity, setOpacity] = useState(1);
 
   // 마운트 시 스크롤 처리
-  // - 뒤로가기(scrollMap에 저장된 값 있음): 해당 위치로 복원
-  // - 필터 변경 등 새 진입(저장값 없음): 상단으로 초기화 (과다 호출 방지)
+  // - 뒤로가기(scrollMap에 저장된 값 있음): fade out → scrollTo → fade in
+  // - 필터 변경 등 새 진입(저장값 없음): 상단으로 초기화
   useEffect(() => {
     const y = scrollMap.get(gridKey);
     if (y) {
-      window.scrollTo({ top: y });
+      setOpacity(0);
       scrollMap.delete(gridKey);
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: y });
+        setOpacity(1);
+      });
     } else {
       window.scrollTo({ top: 0 });
     }
@@ -83,7 +89,7 @@ export default function PokemonGrid({ gridKey, initialItems, total, generation, 
   }
 
   return (
-    <div onClick={handleNavigate}>
+    <div onClick={handleNavigate} style={{ opacity, transition: opacity === 1 ? "opacity 150ms ease-in" : undefined }}>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
         {items.map((pokemon) => (
           <PokemonCard key={pokemon.id} pokemon={pokemon} />

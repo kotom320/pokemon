@@ -30,13 +30,14 @@ export default function PokemonCard({ pokemon }: { pokemon: PokemonListItem }) {
         <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full self-start font-mono">
           {String(pokemon.id).padStart(3, "0")}
         </span>
-        <div className="relative w-24 h-24">
+        <div className="relative w-24 h-24 rounded-lg bg-gray-50">
           <Image
             src={pokemon.imageUrl}
             alt={pokemon.koreanName}
             fill
             sizes="96px"
-            className="object-contain"
+            className="object-contain transition-opacity duration-200"
+            placeholder="empty"
           />
         </div>
         <p className="font-semibold text-gray-800 text-sm">{pokemon.koreanName}</p>
