@@ -35,6 +35,7 @@ function EvolutionStage({
           fill
           sizes={`${imgPx}px`}
           className="object-contain"
+          unoptimized
         />
       </div>
       <p className={`text-xs font-medium text-center ${isCurrent ? "text-red-500" : "text-gray-700"}`}>

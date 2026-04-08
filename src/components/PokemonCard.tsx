@@ -36,8 +36,8 @@ export default function PokemonCard({ pokemon }: { pokemon: PokemonListItem }) {
             alt={pokemon.koreanName}
             fill
             sizes="96px"
-            className="object-contain transition-opacity duration-200"
-            placeholder="empty"
+            className="object-contain"
+            unoptimized
           />
         </div>
         <p className="font-semibold text-gray-800 text-sm">{pokemon.koreanName}</p>

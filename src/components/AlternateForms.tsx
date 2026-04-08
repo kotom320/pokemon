@@ -26,6 +26,7 @@ export default function AlternateForms({ forms, currentId, onSelect }: Props) {
                 fill
                 sizes="80px"
                 className="object-contain"
+                unoptimized
               />
             </div>
             <p className="text-xs font-medium text-gray-700 text-center">

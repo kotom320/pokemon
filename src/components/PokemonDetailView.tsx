@@ -70,6 +70,7 @@ export default function PokemonDetailView({ initialData }: { initialData: Pokemo
             sizes="160px"
             className="object-contain"
             priority
+            unoptimized
           />
         </div>
         <h1 className="text-2xl font-bold text-gray-900">{pokemon.koreanName}</h1>
