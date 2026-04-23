@@ -14,5 +14,10 @@ create index if not exists idx_pokemon_korean_name on pokemon using gin (korean_
 -- trigram 확장 활성화 (ILIKE 검색 최적화)
 create extension if not exists pg_trgm;
 
--- RLS 비활성화 (읽기 전용 공개 데이터)
-alter table pokemon disable row level security;
+-- RLS 활성화 + 공개 읽기 허용
+alter table pokemon enable row level security;
+
+create policy "Allow public read"
+  on pokemon
+  for select
+  using (true);
