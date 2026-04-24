@@ -6,7 +6,7 @@ import PokemonGrid from "@/components/PokemonGrid";
 import PokemonCard from "@/components/PokemonCard";
 import type { PokemonListItem } from "@/lib/types";
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 40;
 
 function toListItem(row: {
   id: number;

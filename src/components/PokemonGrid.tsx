@@ -5,7 +5,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import PokemonCard from "./PokemonCard";
 import type { PokemonListItem } from "@/lib/types";
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 40;
 
 interface Props {
   gridKey: string;
