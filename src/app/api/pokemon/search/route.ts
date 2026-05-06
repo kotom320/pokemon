@@ -35,6 +35,7 @@ export async function GET(req: NextRequest) {
 
   const items = (data ?? []).map((row) => ({
     id: row.id,
+    displayId: row.sort_id ?? row.id,
     name: row.name,
     koreanName: row.korean_name,
     imageUrl: row.image_url,

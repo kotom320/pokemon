@@ -1,5 +1,6 @@
 export interface PokemonListItem {
   id: number;
+  displayId: number;    // 도감 번호 (폼이면 기본 포켓몬 번호, 기본 포켓몬이면 id와 동일)
   name: string;         // 영문 slug (API용)
   koreanName: string;   // 한국어 이름
   imageUrl: string;

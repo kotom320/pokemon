@@ -10,6 +10,7 @@ const PAGE_SIZE = 40;
 
 function toListItem(row: {
   id: number;
+  sort_id?: number;
   name: string;
   korean_name: string;
   image_url: string;
@@ -17,6 +18,7 @@ function toListItem(row: {
 }): PokemonListItem {
   return {
     id: row.id,
+    displayId: row.sort_id ?? row.id,
     name: row.name,
     koreanName: row.korean_name,
     imageUrl: row.image_url,
@@ -52,7 +54,7 @@ export default async function Home({
           {items.length === 0 ? (
             <p className="text-center text-gray-400 mt-12">검색 결과가 없습니다.</p>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 md:gap-4">
               {items.map((pokemon) => <PokemonCard key={pokemon.id} pokemon={pokemon} />)}
             </div>
           )}
@@ -65,11 +67,11 @@ export default async function Home({
   let query = supabase.from("pokemon").select("*", { count: "exact" });
   if (generation && GENERATION_RANGES[generation]) {
     const { start, end } = GENERATION_RANGES[generation];
-    query = query.gte("id", start).lte("id", end);
+    query = query.gte("sort_id", start).lte("sort_id", end);
   }
   if (type) query = query.contains("types", [type]);
 
-  const { data, count } = await query.order("id").range(0, PAGE_SIZE - 1);
+  const { data, count } = await query.order("sort_id").order("id").range(0, PAGE_SIZE - 1);
   const items = (data ?? []).map(toListItem);
   const total = count ?? 0;
   const gridKey = `${generation}-${type}`;

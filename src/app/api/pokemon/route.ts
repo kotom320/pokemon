@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
 
   if (generation && GENERATION_RANGES[generation]) {
     const { start, end } = GENERATION_RANGES[generation];
-    query = query.gte("id", start).lte("id", end);
+    query = query.gte("sort_id", start).lte("sort_id", end);
   }
 
   if (type) {
@@ -21,6 +21,7 @@ export async function GET(req: NextRequest) {
   }
 
   const { data, count, error } = await query
+    .order("sort_id")
     .order("id")
     .range(offset, offset + limit - 1);
 
@@ -30,6 +31,7 @@ export async function GET(req: NextRequest) {
 
   const items = (data ?? []).map((row) => ({
     id: row.id,
+    displayId: row.sort_id ?? row.id,
     name: row.name,
     koreanName: row.korean_name,
     imageUrl: row.image_url,

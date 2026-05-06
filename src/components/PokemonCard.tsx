@@ -25,22 +25,22 @@ const TYPE_COLORS: Record<string, string> = {
 
 export default function PokemonCard({ pokemon }: { pokemon: PokemonListItem }) {
   return (
-    <Link href={`/pokemon/${pokemon.id}`} className="touch-manipulation">
-      <div className="bg-white rounded-2xl shadow-sm active:scale-95 active:shadow-none transition-transform duration-100 p-4 flex flex-col items-center gap-2 select-none">
-        <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full self-start font-mono">
-          {String(pokemon.id).padStart(3, "0")}
+    <Link href={`/pokemon/${pokemon.id}`} className="touch-manipulation h-full">
+      <div className="h-full bg-white rounded-2xl shadow-sm active:scale-95 active:shadow-none transition-transform duration-100 p-2 sm:p-3 md:p-4 flex flex-col items-center gap-1 sm:gap-2 select-none">
+        <span className="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full self-start font-mono">
+          {String(pokemon.displayId).padStart(3, "0")}
         </span>
-        <div className="relative w-24 h-24">
+        <div className="relative w-14 h-14 sm:w-20 sm:h-20 md:w-24 md:h-24">
           <Image
             src={pokemon.imageUrl}
             alt={pokemon.koreanName}
             fill
-            sizes="96px"
+            sizes="(max-width: 640px) 56px, (max-width: 768px) 80px, 96px"
             className="object-contain"
             unoptimized
           />
         </div>
-        <p className="font-semibold text-gray-800 text-sm">{pokemon.koreanName}</p>
+        <p className="font-semibold text-gray-800 text-xs sm:text-sm text-center leading-tight">{pokemon.koreanName}</p>
         <div className="flex gap-1 flex-wrap justify-center">
           {pokemon.types.map((type) => (
             <span
